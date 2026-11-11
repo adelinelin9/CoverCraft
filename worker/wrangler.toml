@@ -1,0 +1,11 @@
+name = "covercraft-worker"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+# Set your GitHub Pages URL here so the Worker allows requests from it.
+# Replace with your actual deployed URL after publishing to GitHub Pages.
+[vars]
+ALLOWED_ORIGIN = "https://adelinelin9.github.io"
+
+# GEMINI_API_KEY is stored as a secret — never put it here.
+# Run: wrangler secret put GEMINI_API_KEY
