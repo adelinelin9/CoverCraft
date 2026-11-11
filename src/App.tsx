@@ -6,7 +6,6 @@ import StepDetails from './components/StepDetails'
 import StepRecommendations from './components/StepRecommendations'
 import StepQuestionnaire from './components/StepQuestionnaire'
 import StepCoverLetter from './components/StepCoverLetter'
-import { analyzeResume, generateCoverLetter } from './services/api'
 import type { ExperienceRecommendation, QuestionnaireAnswers } from './types'
 import {
   DEMO_RESUME,
@@ -55,11 +54,7 @@ export default function App() {
   }
 
   async function handleAnalyze() {
-    const recs = await analyzeResume(resume, jobDescription)
-    setRecommendations(recs)
-    setSelectedIds(new Set(recs.map((r) => r.id)))
-    setIsDemo(false)
-    goToStep(2)
+    throw new Error('AI backend not yet connected. Click "Try Demo Instead" to explore the full experience.')
   }
 
   function handleDemoStart() {
@@ -94,12 +89,7 @@ export default function App() {
       goToStep(4)
       return
     }
-    const selected = recommendations.filter((r) => selectedIds.has(r.id))
-    const result = await generateCoverLetter(resume, jobDescription, selected, questionnaire)
-    setCoverLetter(result.coverLetter)
-    setSuggestions(result.suggestions)
-    setLetterIsStale(false)
-    goToStep(4)
+    throw new Error('AI backend not yet connected.')
   }
 
   async function handleRegenerate(): Promise<string> {
@@ -109,12 +99,7 @@ export default function App() {
       setLetterIsStale(false)
       return DEMO_COVER_LETTER
     }
-    const selected = recommendations.filter((r) => selectedIds.has(r.id))
-    const result = await generateCoverLetter(resume, jobDescription, selected, questionnaire)
-    setCoverLetter(result.coverLetter)
-    setSuggestions(result.suggestions)
-    setLetterIsStale(false)
-    return result.coverLetter
+    throw new Error('AI backend not yet connected.')
   }
 
   const selectedExperiences = recommendations.filter((r) => selectedIds.has(r.id))
