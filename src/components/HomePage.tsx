@@ -1,4 +1,4 @@
-import { FileText, Sparkles, CheckCircle2, ArrowRight } from 'lucide-react'
+import { FileText, Sparkles, PenLine, FileCheck, ArrowRight } from 'lucide-react'
 
 interface Props {
   onGetStarted: () => void
@@ -59,8 +59,8 @@ export default function HomePage({ onGetStarted, onDemo }: Props) {
           </button>
         </div>
 
-        {/* How it works */}
-        <div className="grid sm:grid-cols-3 gap-6 w-full text-left">
+        {/* How it works — 4 steps, 2×2 grid */}
+        <div className="grid grid-cols-2 gap-4 w-full text-left">
           {[
             {
               icon: FileText,
@@ -69,21 +69,26 @@ export default function HomePage({ onGetStarted, onDemo }: Props) {
             },
             {
               icon: Sparkles,
-              title: '2. Review AI insights',
-              desc: 'See which of your experiences best match the role. Choose what to highlight.',
+              title: '2. Review AI matches',
+              desc: 'See which of your experiences best match the role and choose what to highlight.',
             },
             {
-              icon: CheckCircle2,
-              title: '3. Craft your letter',
-              desc: 'Answer a few quick questions. AI drafts a letter; you polish it your way.',
+              icon: PenLine,
+              title: '3. Personalize your letter',
+              desc: 'Answer a few questions in your own words so the letter sounds like you.',
+            },
+            {
+              icon: FileCheck,
+              title: '4. Review your cover letter',
+              desc: 'Read the draft, make any edits you want, then copy it.',
             },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} className="bg-white rounded-2xl p-5 border border-purple-50 shadow-sm">
               <div className="w-9 h-9 bg-purple-50 rounded-lg flex items-center justify-center mb-3">
                 <Icon className="w-5 h-5 text-purple-500" />
               </div>
-              <h3 className="font-semibold text-gray-800 mb-1">{title}</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
+              <h3 className="font-semibold text-gray-800 mb-1 text-sm sm:text-base">{title}</h3>
+              <p className="text-xs sm:text-sm text-gray-500 leading-relaxed">{desc}</p>
             </div>
           ))}
         </div>

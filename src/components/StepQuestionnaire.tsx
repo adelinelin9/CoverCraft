@@ -41,9 +41,9 @@ export default function StepQuestionnaire({
   return (
     <div className="max-w-2xl mx-auto w-full px-4 pb-12">
       <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">Tell us a little more</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">In your own words</h2>
         <p className="text-gray-500 text-sm">
-          Your answers help AI write a letter that actually sounds like you.
+          Your answers help AI write a letter that sounds like you, not a template.
         </p>
       </div>
 
@@ -117,20 +117,21 @@ export default function StepQuestionnaire({
           )}
         </div>
 
-        {/* Q2 */}
+        {/* Q2 — updated: asks for a specific experience/accomplishment to spotlight */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1">
-            Which skills or strengths would you like to emphasize?
+            Is there a particular experience or accomplishment you'd like us to focus on?
             <span className="text-red-400 ml-0.5">*</span>
           </label>
           <p className="text-xs text-gray-400 mb-2">
-            Mention skills you're proud of or that you feel set you apart.
+            Something from your background that you feel deserves more attention — a project,
+            a result, or a moment that shows what you're capable of.
           </p>
           <textarea
             value={answers.strengths}
             onChange={(e) => onChange('strengths', e.target.value)}
             onBlur={() => setTouched((t) => ({ ...t, strengths: true }))}
-            placeholder="e.g. My ability to quickly learn new frameworks and my experience shipping features end-to-end…"
+            placeholder="e.g. I built a real-time dashboard that cut our team's reporting time in half — I'd love that to come through in the letter…"
             rows={3}
             className={`w-full rounded-xl border px-4 py-3 text-sm text-gray-700 placeholder-gray-300 resize-none transition-colors focus:outline-none focus:ring-2 focus:ring-purple-300 ${
               touched.strengths && !answers.strengths.trim()

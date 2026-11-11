@@ -21,7 +21,6 @@ type Step = 'home' | NumericStep
 
 export default function App() {
   const [step, setStep] = useState<Step>('home')
-  // Track the highest step reached so the progress bar knows what's navigable
   const [maxStep, setMaxStep] = useState<NumericStep>(1)
 
   const [resume, setResume] = useState('')
@@ -37,9 +36,17 @@ export default function App() {
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [isDemo, setIsDemo] = useState(false)
 
+  // True when inputs have changed after the cover letter was last generated.
+  // Clears only on a fresh generate or regenerate — the letter is never changed silently.
+  const [letterIsStale, setLetterIsStale] = useState(false)
+
   function goToStep(s: NumericStep) {
     setStep(s)
     if (s > maxStep) setMaxStep(s)
+  }
+
+  function markStaleIfLetterExists() {
+    if (coverLetter) setLetterIsStale(true)
   }
 
   function handleFieldChange(field: 'resume' | 'jobDescription', value: string) {
@@ -65,6 +72,7 @@ export default function App() {
   }
 
   function handleToggle(id: string) {
+    markStaleIfLetterExists()
     setSelectedIds((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -74,6 +82,7 @@ export default function App() {
   }
 
   function handleQuestionnaireChange(field: keyof QuestionnaireAnswers, value: string) {
+    markStaleIfLetterExists()
     setQuestionnaire((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -81,6 +90,7 @@ export default function App() {
     if (isDemo) {
       setCoverLetter(DEMO_COVER_LETTER)
       setSuggestions(DEMO_SUGGESTIONS)
+      setLetterIsStale(false)
       goToStep(4)
       return
     }
@@ -88,20 +98,22 @@ export default function App() {
     const result = await generateCoverLetter(resume, jobDescription, selected, questionnaire)
     setCoverLetter(result.coverLetter)
     setSuggestions(result.suggestions)
+    setLetterIsStale(false)
     goToStep(4)
   }
 
-  // Returns the new letter so StepCoverLetter can update its "clean version" ref
   async function handleRegenerate(): Promise<string> {
     if (isDemo) {
       setCoverLetter(DEMO_COVER_LETTER)
       setSuggestions(DEMO_SUGGESTIONS)
+      setLetterIsStale(false)
       return DEMO_COVER_LETTER
     }
     const selected = recommendations.filter((r) => selectedIds.has(r.id))
     const result = await generateCoverLetter(resume, jobDescription, selected, questionnaire)
     setCoverLetter(result.coverLetter)
     setSuggestions(result.suggestions)
+    setLetterIsStale(false)
     return result.coverLetter
   }
 
@@ -143,6 +155,7 @@ export default function App() {
             jobDescription={jobDescription}
             onChange={handleFieldChange}
             onAnalyze={handleAnalyze}
+            onFillDemo={handleDemoStart}
           />
         )}
 
@@ -172,6 +185,7 @@ export default function App() {
             coverLetter={coverLetter}
             suggestions={suggestions}
             isDemo={isDemo}
+            isStale={letterIsStale}
             onChange={setCoverLetter}
             onRegenerate={handleRegenerate}
             onBack={() => setStep(3)}

@@ -158,13 +158,13 @@ ${experienceList}
 
 APPLICANT'S OWN WORDS:
 - What interests them about this position: "${questionnaire.interest}"
-- Skills/strengths they want to emphasize: "${questionnaire.strengths}"
+- A specific experience or accomplishment they want to focus on: "${questionnaire.strengths}"
 - Additional context: "${questionnaire.additionalInfo || 'None provided.'}"
 
 INSTRUCTIONS:
 - Write a professional cover letter, 250–350 words.
 - Sound natural and genuine — avoid generic filler phrases like "I am writing to express my interest."
-- Incorporate the applicant's stated interests and strengths in their own voice.
+- Incorporate the applicant's stated interest in the position and spotlight the specific experience or accomplishment they want to focus on.
 - Emphasize only the highlighted experiences. Never invent qualifications, achievements, or company details not supported by the resume.
 - Do not include a date, address block, or "Dear Hiring Manager" salutation — start directly with the opening paragraph.
 - End with a professional closing and the applicant's name (from the resume).

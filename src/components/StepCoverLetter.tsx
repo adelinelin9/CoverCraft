@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Copy, CheckCheck, Sparkles, RotateCcw, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react'
+import { Copy, CheckCheck, Sparkles, RotateCcw, Lightbulb, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
 import LoadingSpinner from './LoadingSpinner'
 import ErrorBanner from './ErrorBanner'
 
@@ -7,6 +7,8 @@ interface Props {
   coverLetter: string
   suggestions: string[]
   isDemo: boolean
+  /** True when the user changed their selections or questionnaire after generating */
+  isStale: boolean
   onChange: (value: string) => void
   /** Returns the newly generated letter so we can track the "clean" version */
   onRegenerate: () => Promise<string>
@@ -17,6 +19,7 @@ export default function StepCoverLetter({
   coverLetter,
   suggestions,
   isDemo,
+  isStale,
   onChange,
   onRegenerate,
   onBack,
@@ -34,7 +37,7 @@ export default function StepCoverLetter({
   async function handleCopy() {
     await navigator.clipboard.writeText(coverLetter)
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    setTimeout(() => setCopied(false), 4000)
   }
 
   async function handleRegenerate() {
@@ -46,7 +49,6 @@ export default function StepCoverLetter({
     setLoading(true)
     setError(null)
     try {
-      // onRegenerate returns the new letter so we can update our ref immediately
       const newLetter = await onRegenerate()
       aiVersionRef.current = newLetter
     } catch (e) {
@@ -70,6 +72,19 @@ export default function StepCoverLetter({
           </div>
         )}
       </div>
+
+      {/* Stale-letter notice — shown when inputs changed since generation */}
+      {isStale && !loading && (
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5">
+          <RefreshCw className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-amber-800">
+              Your selections or answers changed since this letter was generated. Your current
+              letter is preserved — regenerate when you're ready to update it.
+            </p>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="mb-5">
@@ -156,40 +171,49 @@ export default function StepCoverLetter({
       {loading ? (
         <LoadingSpinner message="Regenerating your cover letter…" />
       ) : (
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={onBack}
-            className="bg-white hover:bg-gray-50 text-gray-600 font-medium py-3 px-5 rounded-xl border border-gray-200 transition-colors text-sm"
-          >
-            ← Back
-          </button>
-          <button
-            type="button"
-            onClick={handleRegenerate}
-            className="flex items-center gap-2 bg-white hover:bg-purple-50 text-purple-600 font-medium py-3 px-5 rounded-xl border border-purple-200 transition-colors text-sm"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Regenerate
-          </button>
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="flex-1 flex items-center justify-center gap-2 bg-purple-500 hover:bg-purple-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5"
-          >
-            {copied ? (
-              <>
-                <CheckCheck className="w-4 h-4" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="w-4 h-4" />
-                Copy to Clipboard
-              </>
-            )}
-          </button>
-        </div>
+        <>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={onBack}
+              className="bg-white hover:bg-gray-50 text-gray-600 font-medium py-3 px-5 rounded-xl border border-gray-200 transition-colors text-sm"
+            >
+              ← Back
+            </button>
+            <button
+              type="button"
+              onClick={handleRegenerate}
+              className="flex items-center gap-2 bg-white hover:bg-purple-50 text-purple-600 font-medium py-3 px-5 rounded-xl border border-purple-200 transition-colors text-sm"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Regenerate
+            </button>
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="flex-1 flex items-center justify-center gap-2 bg-purple-500 hover:bg-purple-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5"
+            >
+              {copied ? (
+                <>
+                  <CheckCheck className="w-4 h-4" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  Copy to Clipboard
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Copy confirmation message */}
+          {copied && (
+            <p className="text-center text-sm text-green-600 font-medium mt-3">
+              Your cover letter is ready to use. Good luck! 🎉
+            </p>
+          )}
+        </>
       )}
     </div>
   )

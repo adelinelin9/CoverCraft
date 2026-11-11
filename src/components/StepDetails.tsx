@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { FileText, Briefcase, AlertCircle } from 'lucide-react'
 import LoadingSpinner from './LoadingSpinner'
 import ErrorBanner from './ErrorBanner'
-import { DEMO_RESUME, DEMO_JOB } from '../demo'
 
 interface Props {
   resume: string
   jobDescription: string
   onChange: (field: 'resume' | 'jobDescription', value: string) => void
   onAnalyze: () => Promise<void>
+  /** Skips AI analysis and loads the full demo experience */
+  onFillDemo: () => void
 }
 
 const MIN_CHARS = 50
@@ -23,7 +24,7 @@ function CharCount({ value, min }: { value: string; min: number }) {
   )
 }
 
-export default function StepDetails({ resume, jobDescription, onChange, onAnalyze }: Props) {
+export default function StepDetails({ resume, jobDescription, onChange, onAnalyze, onFillDemo }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [touched, setTouched] = useState({ resume: false, job: false })
@@ -43,11 +44,6 @@ export default function StepDetails({ resume, jobDescription, onChange, onAnalyz
     } finally {
       setLoading(false)
     }
-  }
-
-  function fillDemo() {
-    onChange('resume', DEMO_RESUME)
-    onChange('jobDescription', DEMO_JOB)
   }
 
   return (
@@ -133,10 +129,10 @@ export default function StepDetails({ resume, jobDescription, onChange, onAnalyz
             </button>
             <button
               type="button"
-              onClick={fillDemo}
+              onClick={onFillDemo}
               className="bg-white hover:bg-purple-50 text-purple-600 font-medium py-3 px-5 rounded-xl border border-purple-200 transition-colors text-sm"
             >
-              Fill with Demo Data
+              Try Demo Instead
             </button>
           </div>
         )}
