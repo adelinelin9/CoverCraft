@@ -7,6 +7,7 @@ import StepRecommendations from './components/StepRecommendations'
 import StepQuestionnaire from './components/StepQuestionnaire'
 import StepCoverLetter from './components/StepCoverLetter'
 import type { ExperienceRecommendation, QuestionnaireAnswers } from './types'
+import { analyzeExperience, generateCoverLetter } from './services/api'
 import {
   DEMO_RESUME,
   DEMO_JOB,
@@ -49,12 +50,18 @@ export default function App() {
   }
 
   function handleFieldChange(field: 'resume' | 'jobDescription', value: string) {
+    markStaleIfLetterExists()
     if (field === 'resume') setResume(value)
     else setJobDescription(value)
   }
 
   async function handleAnalyze() {
-    throw new Error('AI backend not yet connected. Click "Try Demo Instead" to explore the full experience.')
+    const result = await analyzeExperience(resume, jobDescription)
+    markStaleIfLetterExists()
+    setRecommendations(result)
+    setSelectedIds(new Set(result.map((recommendation) => recommendation.id)))
+    setIsDemo(false)
+    goToStep(2)
   }
 
   function handleDemoStart() {
@@ -81,15 +88,30 @@ export default function App() {
     setQuestionnaire((prev) => ({ ...prev, [field]: value }))
   }
 
+  const selectedExperiences = recommendations.filter((r) => selectedIds.has(r.id))
+
+  async function requestCoverLetter(): Promise<string> {
+    const result = await generateCoverLetter({
+      resume,
+      jobDescription,
+      selectedRecommendations: selectedExperiences,
+      questionnaire,
+    })
+    setCoverLetter(result.coverLetter)
+    setSuggestions(result.suggestions)
+    setLetterIsStale(false)
+    return result.coverLetter
+  }
+
   async function handleGenerate() {
     if (isDemo) {
       setCoverLetter(DEMO_COVER_LETTER)
       setSuggestions(DEMO_SUGGESTIONS)
       setLetterIsStale(false)
-      goToStep(4)
-      return
+    } else {
+      await requestCoverLetter()
     }
-    throw new Error('AI backend not yet connected.')
+    goToStep(4)
   }
 
   async function handleRegenerate(): Promise<string> {
@@ -99,10 +121,8 @@ export default function App() {
       setLetterIsStale(false)
       return DEMO_COVER_LETTER
     }
-    throw new Error('AI backend not yet connected.')
+    return requestCoverLetter()
   }
-
-  const selectedExperiences = recommendations.filter((r) => selectedIds.has(r.id))
 
   if (step === 'home') {
     return <HomePage onGetStarted={() => goToStep(1)} onDemo={handleDemoStart} />

@@ -26,14 +26,16 @@ function getAllowedOrigins(env) {
 }
 
 function corsHeaders(origin, env) {
-  const allowed = getAllowedOrigins(env)
-  const use = allowed.includes(origin) ? origin : allowed[0]
-  return {
-    'Access-Control-Allow-Origin': use,
+  const headers = {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400',
+    Vary: 'Origin',
   }
+  if (getAllowedOrigins(env).includes(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin
+  }
+  return headers
 }
 
 function json(data, status = 200, origin = '', env = {}) {
@@ -49,24 +51,49 @@ function err(message, status, origin, env) {
 
 // ─── Gemini helper ───────────────────────────────────────────────────────────
 
-async function gemini(prompt, apiKey) {
-  const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
-    }),
-  })
+async function gemini(prompt, apiKey, jsonResponse = false) {
+  let res
+  try {
+    res = await fetch(GEMINI_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 4096,
+          ...(jsonResponse ? { responseMimeType: 'application/json' } : {}),
+        },
+      }),
+    })
+  } catch {
+    throw { status: 502, message: 'Could not reach the AI service. Please try again.' }
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => '')
-    throw new Error(`Gemini API error ${res.status}: ${text.slice(0, 200)}`)
+    console.error(`Gemini API error ${res.status}: ${text.slice(0, 500)}`)
+    if (res.status === 429) {
+      throw { status: 429, message: 'The AI service is busy. Please wait a moment and try again.' }
+    }
+    throw {
+      status: 502,
+      message: 'The AI service could not complete the request. Check the Worker logs for details.',
+    }
   }
 
-  const data = await res.json()
+  let data
+  try {
+    data = await res.json()
+  } catch {
+    throw { status: 502, message: 'The AI service returned an invalid response. Please try again.' }
+  }
+
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
-  if (!text) throw new Error('Empty response from Gemini.')
+  if (!text) throw { status: 502, message: 'The AI service returned an empty response. Please try again.' }
   return text
 }
 
@@ -109,20 +136,43 @@ Respond with ONLY a JSON array (no markdown, no extra text) in this exact format
   }
 ]`
 
-  const raw = await gemini(prompt, apiKey)
+  const raw = await gemini(prompt, apiKey, true)
 
   // Strip markdown code fences if present
   const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
 
-  let recommendations
+  let parsed
   try {
-    recommendations = JSON.parse(cleaned)
+    parsed = JSON.parse(cleaned)
   } catch {
-    throw new Error('Could not parse AI response. Please try again.')
+    throw { status: 502, message: 'The AI service returned unreadable recommendations. Please try again.' }
   }
 
-  if (!Array.isArray(recommendations) || recommendations.length === 0) {
-    throw new Error('AI returned an unexpected format. Please try again.')
+  if (!Array.isArray(parsed)) {
+    throw { status: 502, message: 'The AI service returned unexpected recommendations. Please try again.' }
+  }
+
+  const recommendations = parsed
+    .filter(
+      (rec) =>
+        rec &&
+        typeof rec.title === 'string' &&
+        rec.title.trim() &&
+        typeof rec.skill === 'string' &&
+        rec.skill.trim() &&
+        typeof rec.explanation === 'string' &&
+        rec.explanation.trim(),
+    )
+    .slice(0, 5)
+    .map((rec, index) => ({
+      id: `rec-${index + 1}`,
+      title: rec.title.trim(),
+      skill: rec.skill.trim(),
+      explanation: rec.explanation.trim(),
+    }))
+
+  if (recommendations.length === 0) {
+    throw { status: 502, message: 'The AI service returned no valid recommendations. Please try again.' }
   }
 
   return { recommendations }
@@ -131,13 +181,35 @@ Respond with ONLY a JSON array (no markdown, no extra text) in this exact format
 async function handleGenerate(body, apiKey) {
   const { resume, jobDescription, selectedRecommendations, questionnaire } = body
 
-  if (!resume || !jobDescription) throw { status: 400, message: 'Missing resume or job description.' }
-  if (!Array.isArray(selectedRecommendations) || selectedRecommendations.length === 0)
-    throw { status: 400, message: 'No experiences selected.' }
-  if (!questionnaire?.interest || !questionnaire?.strengths)
-    throw { status: 400, message: 'Missing questionnaire answers.' }
+  if (typeof resume !== 'string' || resume.trim().length < 50)
+    throw { status: 400, message: 'Resume must be at least 50 characters.' }
+  if (typeof jobDescription !== 'string' || jobDescription.trim().length < 50)
+    throw { status: 400, message: 'Job description must be at least 50 characters.' }
+  if (
+    !Array.isArray(selectedRecommendations) ||
+    selectedRecommendations.length === 0 ||
+    !selectedRecommendations.every(
+      (rec) =>
+        rec &&
+        typeof rec.title === 'string' &&
+        rec.title.trim() &&
+        typeof rec.explanation === 'string' &&
+        rec.explanation.trim(),
+    )
+  )
+    throw { status: 400, message: 'Select at least one valid experience.' }
+  if (
+    !questionnaire ||
+    typeof questionnaire.interest !== 'string' ||
+    !questionnaire.interest.trim() ||
+    typeof questionnaire.strengths !== 'string' ||
+    !questionnaire.strengths.trim() ||
+    (questionnaire.additionalInfo !== undefined && typeof questionnaire.additionalInfo !== 'string')
+  )
+    throw { status: 400, message: 'Missing or invalid questionnaire answers.' }
 
   const experienceList = selectedRecommendations
+    .slice(0, 5)
     .map((r) => `- ${r.title}: ${r.explanation}`)
     .join('\n')
 
@@ -177,6 +249,10 @@ Then provide 2–3 short, specific, actionable suggestions for how the applicant
   const parts = raw.split('---SUGGESTIONS---')
   const coverLetter = parts[0].trim()
   const suggestionBlock = parts[1]?.trim() ?? ''
+
+  if (!coverLetter) {
+    throw { status: 502, message: 'The AI service returned an empty cover letter. Please try again.' }
+  }
 
   const suggestions = suggestionBlock
     .split(/\n+/)
@@ -219,6 +295,9 @@ export default {
       const text = await request.text()
       if (text.length > MAX_BODY_BYTES) return err('Request body too large.', 413, origin, env)
       body = JSON.parse(text)
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        return err('JSON body must be an object.', 400, origin, env)
+      }
     } catch {
       return err('Invalid JSON body.', 400, origin, env)
     }

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { Copy, CheckCheck, Sparkles, RotateCcw, Lightbulb, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
 import LoadingSpinner from './LoadingSpinner'
 import ErrorBanner from './ErrorBanner'
@@ -31,13 +31,17 @@ export default function StepCoverLetter({
   const [suggestionsOpen, setSuggestionsOpen] = useState(true)
 
   // Track the last AI-generated version so we can detect user edits
-  const aiVersionRef = useRef(coverLetter)
-  const isEdited = coverLetter !== aiVersionRef.current
+  const [aiVersion, setAiVersion] = useState(coverLetter)
+  const isEdited = coverLetter !== aiVersion
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(coverLetter)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 4000)
+    try {
+      await navigator.clipboard.writeText(coverLetter)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 4000)
+    } catch {
+      setError('Could not access your clipboard. Select the letter and copy it manually.')
+    }
   }
 
   async function handleRegenerate() {
@@ -50,7 +54,7 @@ export default function StepCoverLetter({
     setError(null)
     try {
       const newLetter = await onRegenerate()
-      aiVersionRef.current = newLetter
+      setAiVersion(newLetter)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.')
     } finally {
