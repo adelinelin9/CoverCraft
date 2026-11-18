@@ -70,7 +70,7 @@ export default function App() {
     setRecommendations(DEMO_RECOMMENDATIONS)
     setSelectedIds(new Set(DEMO_RECOMMENDATIONS.map((r) => r.id)))
     setIsDemo(true)
-    goToStep(2)
+    goToStep(1)
   }
 
   function handleToggle(id: string) {
