@@ -1,18 +1,3 @@
-/**
- * CoverCraft Cloudflare Worker
- *
- * Routes:
- *   POST /analyze  — resume + job description → experience recommendations
- *   POST /generate — full inputs → cover letter + improvement suggestions
- *
- * Secrets (set via `npm run secret:worker`):
- *   OPENAI_API_KEY
- *
- * Environment variables (set in wrangler.toml or dashboard):
- *   ALLOWED_ORIGIN — your GitHub Pages URL, e.g. https://adelinelin9.github.io
- *   OPENAI_MODEL — optional model override
- */
-
 const OPENAI_URL = 'https://api.openai.com/v1/responses'
 const DEFAULT_OPENAI_MODEL = 'gpt-6-luna'
 
