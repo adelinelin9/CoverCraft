@@ -161,6 +161,7 @@ export default function App() {
             onChange={handleFieldChange}
             onAnalyze={handleAnalyze}
             onFillDemo={handleDemoStart}
+            isDemo={isDemo}
           />
         )}
 

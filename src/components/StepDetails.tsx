@@ -10,6 +10,7 @@ interface Props {
   onAnalyze: () => Promise<void>
   /** Skips AI analysis and loads the full demo experience */
   onFillDemo: () => void
+  isDemo: boolean
 }
 
 const MIN_CHARS = 50
@@ -24,7 +25,7 @@ function CharCount({ value, min }: { value: string; min: number }) {
   )
 }
 
-export default function StepDetails({ resume, jobDescription, onChange, onAnalyze, onFillDemo }: Props) {
+export default function StepDetails({ resume, jobDescription, onChange, onAnalyze, onFillDemo, isDemo }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [touched, setTouched] = useState({ resume: false, job: false })
@@ -127,13 +128,15 @@ export default function StepDetails({ resume, jobDescription, onChange, onAnalyz
             >
               Analyze My Experience →
             </button>
-            <button
-              type="button"
-              onClick={onFillDemo}
-              className="bg-white hover:bg-purple-50 text-purple-600 font-medium py-3 px-5 rounded-xl border border-purple-200 transition-colors text-sm"
-            >
-              Try Demo Instead
-            </button>
+            {!isDemo && (
+              <button
+                type="button"
+                onClick={onFillDemo}
+                className="bg-white hover:bg-purple-50 text-purple-600 font-medium py-3 px-5 rounded-xl border border-purple-200 transition-colors text-sm"
+              >
+                Try Demo Instead
+              </button>
+            )}
           </div>
         )}
       </div>
