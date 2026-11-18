@@ -5,15 +5,42 @@
  *   POST /analyze  — resume + job description → experience recommendations
  *   POST /generate — full inputs → cover letter + improvement suggestions
  *
- * Secrets (set via `wrangler secret put GEMINI_API_KEY`):
- *   GEMINI_API_KEY
+ * Secrets (set via `npm run secret:worker`):
+ *   OPENAI_API_KEY
  *
  * Environment variables (set in wrangler.toml or dashboard):
  *   ALLOWED_ORIGIN — your GitHub Pages URL, e.g. https://adelinelin9.github.io
+ *   OPENAI_MODEL — optional model override
  */
 
-const GEMINI_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent'
+const OPENAI_URL = 'https://api.openai.com/v1/responses'
+const DEFAULT_OPENAI_MODEL = 'gpt-6-luna'
+
+const RECOMMENDATIONS_FORMAT = {
+  type: 'json_schema',
+  name: 'experience_recommendations',
+  strict: true,
+  schema: {
+    type: 'object',
+    properties: {
+      recommendations: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            skill: { type: 'string' },
+            explanation: { type: 'string' },
+          },
+          required: ['title', 'skill', 'explanation'],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ['recommendations'],
+    additionalProperties: false,
+  },
+}
 
 const MAX_BODY_BYTES = 50_000 // 50 KB limit
 
@@ -49,24 +76,24 @@ function err(message, status, origin, env) {
   return json({ error: message }, status, origin, env)
 }
 
-// ─── Gemini helper ───────────────────────────────────────────────────────────
+// ─── OpenAI helper ───────────────────────────────────────────────────────────
 
-async function gemini(prompt, apiKey, jsonResponse = false) {
+async function openai(prompt, env, responseFormat = null) {
   let res
   try {
-    res = await fetch(GEMINI_URL, {
+    res = await fetch(OPENAI_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
+        Authorization: `Bearer ${env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 4096,
-          ...(jsonResponse ? { responseMimeType: 'application/json' } : {}),
-        },
+        model: env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL,
+        input: prompt,
+        reasoning: { effort: 'low' },
+        max_output_tokens: 4096,
+        store: false,
+        ...(responseFormat ? { text: { format: responseFormat } } : {}),
       }),
     })
   } catch {
@@ -75,9 +102,16 @@ async function gemini(prompt, apiKey, jsonResponse = false) {
 
   if (!res.ok) {
     const text = await res.text().catch(() => '')
-    console.error(`Gemini API error ${res.status}: ${text.slice(0, 500)}`)
+    const requestId = res.headers.get('x-request-id') ?? 'not provided'
+    console.error(`OpenAI API error ${res.status} (request ${requestId}): ${text.slice(0, 500)}`)
+    if (res.status === 401) {
+      throw {
+        status: 502,
+        message: 'OpenAI rejected the configured API key. Check the OPENAI_API_KEY secret.',
+      }
+    }
     if (res.status === 429) {
-      throw { status: 429, message: 'The AI service is busy. Please wait a moment and try again.' }
+      throw { status: 429, message: 'The AI service is busy or out of quota. Please try again later.' }
     }
     throw {
       status: 502,
@@ -92,14 +126,34 @@ async function gemini(prompt, apiKey, jsonResponse = false) {
     throw { status: 502, message: 'The AI service returned an invalid response. Please try again.' }
   }
 
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
-  if (!text) throw { status: 502, message: 'The AI service returned an empty response. Please try again.' }
+  const content = Array.isArray(data.output)
+    ? data.output.flatMap((item) => (Array.isArray(item?.content) ? item.content : []))
+    : []
+
+  if (content.some((part) => part?.type === 'refusal')) {
+    throw {
+      status: 502,
+      message: 'The AI service declined this request. Please revise your inputs and try again.',
+    }
+  }
+
+  const outputText = content
+    .filter((part) => part?.type === 'output_text' && typeof part.text === 'string')
+    .map((part) => part.text)
+    .join('\n')
+    .trim()
+  const fallbackText = typeof data.output_text === 'string' ? data.output_text.trim() : ''
+  const text = outputText || fallbackText
+
+  if (!text) {
+    throw { status: 502, message: 'The AI service returned an empty response. Please try again.' }
+  }
   return text
 }
 
 // ─── Route handlers ──────────────────────────────────────────────────────────
 
-async function handleAnalyze(body, apiKey) {
+async function handleAnalyze(body, env) {
   const { resume, jobDescription } = body
 
   if (typeof resume !== 'string' || resume.trim().length < 50)
@@ -126,17 +180,18 @@ RULES:
 - Be specific about why each item matches the job requirements.
 - Keep explanations concise (1–2 sentences each).
 
-Respond with ONLY a JSON array (no markdown, no extra text) in this exact format:
-[
-  {
-    "id": "rec-1",
-    "title": "Short title (5–8 words)",
-    "skill": "Specific skill or technology name",
-    "explanation": "Why this matches the job requirements."
-  }
-]`
+Respond with a JSON object in this format:
+{
+  "recommendations": [
+    {
+      "title": "Short title (5–8 words)",
+      "skill": "Specific skill or technology name",
+      "explanation": "Why this matches the job requirements."
+    }
+  ]
+}`
 
-  const raw = await gemini(prompt, apiKey, true)
+  const raw = await openai(prompt, env, RECOMMENDATIONS_FORMAT)
 
   // Strip markdown code fences if present
   const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
@@ -148,11 +203,12 @@ Respond with ONLY a JSON array (no markdown, no extra text) in this exact format
     throw { status: 502, message: 'The AI service returned unreadable recommendations. Please try again.' }
   }
 
-  if (!Array.isArray(parsed)) {
+  const recommendationList = Array.isArray(parsed) ? parsed : parsed?.recommendations
+  if (!Array.isArray(recommendationList)) {
     throw { status: 502, message: 'The AI service returned unexpected recommendations. Please try again.' }
   }
 
-  const recommendations = parsed
+  const recommendations = recommendationList
     .filter(
       (rec) =>
         rec &&
@@ -178,7 +234,7 @@ Respond with ONLY a JSON array (no markdown, no extra text) in this exact format
   return { recommendations }
 }
 
-async function handleGenerate(body, apiKey) {
+async function handleGenerate(body, env) {
   const { resume, jobDescription, selectedRecommendations, questionnaire } = body
 
   if (typeof resume !== 'string' || resume.trim().length < 50)
@@ -244,7 +300,7 @@ INSTRUCTIONS:
 After the cover letter, on a new line, write exactly: ---SUGGESTIONS---
 Then provide 2–3 short, specific, actionable suggestions for how the applicant could strengthen this letter further. Number them 1., 2., 3.`
 
-  const raw = await gemini(prompt, apiKey)
+  const raw = await openai(prompt, env)
 
   const parts = raw.split('---SUGGESTIONS---')
   const coverLetter = parts[0].trim()
@@ -286,8 +342,8 @@ export default {
       return err('Request body too large.', 413, origin, env)
     }
 
-    if (!env.GEMINI_API_KEY) {
-      return err('Server is not configured. Please add your GEMINI_API_KEY secret.', 503, origin, env)
+    if (!env.OPENAI_API_KEY) {
+      return err('Server is not configured. Please add your OPENAI_API_KEY secret.', 503, origin, env)
     }
 
     let body
@@ -304,12 +360,12 @@ export default {
 
     try {
       if (url.pathname === '/analyze') {
-        const result = await handleAnalyze(body, env.GEMINI_API_KEY)
+        const result = await handleAnalyze(body, env)
         return json(result, 200, origin, env)
       }
 
       if (url.pathname === '/generate') {
-        const result = await handleGenerate(body, env.GEMINI_API_KEY)
+        const result = await handleGenerate(body, env)
         return json(result, 200, origin, env)
       }
 

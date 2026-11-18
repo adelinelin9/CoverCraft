@@ -4,7 +4,8 @@ import worker from './index.js'
 
 const ORIGIN = 'http://localhost:5173'
 const ENV = {
-  GEMINI_API_KEY: 'test-key',
+  OPENAI_API_KEY: 'test-key',
+  OPENAI_MODEL: 'gpt-6-luna',
   ALLOWED_ORIGIN: 'https://adelinelin9.github.io',
 }
 
@@ -54,9 +55,22 @@ function request(path, body, origin = ORIGIN) {
   })
 }
 
-function geminiResponse(text) {
+function openAIResponse(text) {
   return new Response(
-    JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] }),
+    JSON.stringify({
+      id: 'resp_test',
+      object: 'response',
+      status: 'completed',
+      output: [
+        {
+          id: 'msg_test',
+          type: 'message',
+          status: 'completed',
+          role: 'assistant',
+          content: [{ type: 'output_text', text, annotations: [] }],
+        },
+      ],
+    }),
     { status: 200, headers: { 'Content-Type': 'application/json' } },
   )
 }
@@ -69,10 +83,10 @@ function stubFetch(t, implementation) {
   })
 }
 
-test('returns a configuration error when the Gemini secret is missing', async () => {
+test('returns a configuration error when the OpenAI secret is missing', async () => {
   const response = await worker.fetch(request('/analyze', ANALYZE_BODY), {})
   assert.equal(response.status, 503)
-  assert.match((await response.json()).error, /GEMINI_API_KEY/)
+  assert.match((await response.json()).error, /OPENAI_API_KEY/)
 })
 
 test('only returns CORS access headers for allowed origins', async () => {
@@ -93,16 +107,29 @@ test('only returns CORS access headers for allowed origins', async () => {
   assert.equal(disallowed.headers.get('Access-Control-Allow-Origin'), null)
 })
 
-test('analyzes a resume and sanitizes Gemini recommendations', async (t) => {
+test('analyzes a resume using OpenAI Structured Outputs and sanitizes recommendations', async (t) => {
   stubFetch(t, async (url, init) => {
-    assert.match(url, /gemini-3\.8-flash:generateContent$/)
+    assert.equal(url, 'https://api.openai.com/v1/responses')
     assert.equal(new URL(url).searchParams.has('key'), false)
-    assert.equal(init.headers['x-goog-api-key'], 'test-key')
+    assert.equal(init.headers.Authorization, 'Bearer test-key')
+    assert.equal(init.headers['Content-Type'], 'application/json')
 
     const upstreamBody = JSON.parse(init.body)
-    assert.equal(upstreamBody.generationConfig.responseMimeType, 'application/json')
-    assert.match(upstreamBody.contents[0].parts[0].text, /Jane Smith/)
-    return geminiResponse(`\`\`\`json\n${JSON.stringify(RECOMMENDATIONS)}\n\`\`\``)
+    assert.equal(upstreamBody.model, 'gpt-6-luna')
+    assert.equal(upstreamBody.reasoning.effort, 'low')
+    assert.equal(upstreamBody.store, false)
+    assert.equal(upstreamBody.max_output_tokens, 4096)
+    assert.equal(upstreamBody.text.format.type, 'json_schema')
+    assert.equal(upstreamBody.text.format.strict, true)
+    assert.equal(upstreamBody.text.format.schema.additionalProperties, false)
+    assert.match(upstreamBody.input, /Jane Smith/)
+
+    const recommendations = RECOMMENDATIONS.map(({ title, skill, explanation }) => ({
+      title,
+      skill,
+      explanation,
+    }))
+    return openAIResponse(JSON.stringify({ recommendations }))
   })
 
   const response = await worker.fetch(request('/analyze', ANALYZE_BODY), ENV)
@@ -121,9 +148,9 @@ test('analyzes a resume and sanitizes Gemini recommendations', async (t) => {
 test('generates a cover letter and parses its suggestions', async (t) => {
   stubFetch(t, async (_url, init) => {
     const upstreamBody = JSON.parse(init.body)
-    assert.equal(upstreamBody.generationConfig.responseMimeType, undefined)
-    assert.match(upstreamBody.contents[0].parts[0].text, /React frontend development/)
-    return geminiResponse(
+    assert.equal(upstreamBody.text, undefined)
+    assert.match(upstreamBody.input, /React frontend development/)
+    return openAIResponse(
       'A personalized cover letter.\n\n---SUGGESTIONS---\n1. Add a specific metric.\n2. Clarify your interest.',
     )
   })
@@ -137,7 +164,7 @@ test('generates a cover letter and parses its suggestions', async (t) => {
 })
 
 test('returns a safe bad-gateway error for malformed analysis output', async (t) => {
-  stubFetch(t, async () => geminiResponse('This is not JSON.'))
+  stubFetch(t, async () => openAIResponse('This is not JSON.'))
   const response = await worker.fetch(request('/analyze', ANALYZE_BODY), ENV)
   assert.equal(response.status, 502)
   assert.match((await response.json()).error, /unreadable recommendations/)
@@ -147,7 +174,34 @@ test('passes through a rate-limit response as an actionable client error', async
   stubFetch(t, async () => new Response('Upstream quota exceeded', { status: 429 }))
   const response = await worker.fetch(request('/generate', GENERATE_BODY), ENV)
   assert.equal(response.status, 429)
-  assert.match((await response.json()).error, /wait a moment/)
+  assert.match((await response.json()).error, /try again later/)
+})
+
+test('returns an actionable error when OpenAI rejects the configured key', async (t) => {
+  stubFetch(t, async () => new Response('Invalid API key', { status: 401 }))
+  const response = await worker.fetch(request('/analyze', ANALYZE_BODY), ENV)
+  assert.equal(response.status, 502)
+  assert.match((await response.json()).error, /OPENAI_API_KEY/)
+})
+
+test('handles an OpenAI refusal without returning it as a cover letter', async (t) => {
+  stubFetch(t, async () =>
+    new Response(
+      JSON.stringify({
+        status: 'completed',
+        output: [
+          {
+            type: 'message',
+            content: [{ type: 'refusal', refusal: 'Request declined' }],
+          },
+        ],
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    ),
+  )
+  const response = await worker.fetch(request('/generate', GENERATE_BODY), ENV)
+  assert.equal(response.status, 502)
+  assert.match((await response.json()).error, /declined this request/)
 })
 
 test('rejects a non-object JSON body', async () => {
@@ -163,7 +217,7 @@ test('rejects a non-object JSON body', async () => {
   assert.match((await response.json()).error, /must be an object/)
 })
 
-test('rejects invalid generation input before calling Gemini', async () => {
+test('rejects invalid generation input before calling OpenAI', async () => {
   const response = await worker.fetch(
     request('/generate', { ...GENERATE_BODY, selectedRecommendations: [] }),
     ENV,

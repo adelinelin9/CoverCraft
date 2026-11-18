@@ -32,8 +32,8 @@ cp .env.example .env.local
 cp worker/.dev.vars.example worker/.dev.vars
 ```
 
-Create a key at [Google AI Studio](https://aistudio.google.com/app/apikey), then paste it after
-`GEMINI_API_KEY=` in `worker/.dev.vars`. This file is ignored by Git. Never put the Gemini key in
+Create a key at the [OpenAI API keys page](https://platform.openai.com/api-keys), then paste it after
+`OPENAI_API_KEY=` in `worker/.dev.vars`. This file is ignored by Git. Never put the OpenAI key in
 `.env.local` or any variable beginning with `VITE_`; Vite variables are included in public frontend
 code. `.env.local` only needs the non-secret local Worker URL, which is already in `.env.example`.
 
@@ -56,12 +56,14 @@ This walks through all four steps using sample data without any API calls.
 
 ## Deploying the AI backend
 
-The Cloudflare Worker calls Gemini securely so the API key is never stored in frontend code.
+The Cloudflare Worker calls OpenAI's Responses API securely so the API key is never stored in
+frontend code. The default model is `gpt-6-luna`; you can change `OPENAI_MODEL` in
+`worker/wrangler.toml`.
 
-### 1. Get a Gemini API key
+### 1. Get an OpenAI API key
 
-1. Go to https://aistudio.google.com/app/apikey
-2. Create a new API key and follow Google's current key-restriction guidance
+1. Go to https://platform.openai.com/api-keys
+2. Create a new secret key and follow OpenAI's current project and billing requirements
 
 ### 2. Authenticate with Cloudflare
 
@@ -87,7 +89,7 @@ Wrangler will print your Worker URL, e.g.:
 
 For local development, set `VITE_WORKER_URL` in `.env.local`. For a deployed site, set it to the
 Worker URL printed above in your hosting provider's build settings, then rebuild the frontend.
-The Worker URL is public configuration, not a secret. The Gemini key must only be in Cloudflare
+The Worker URL is public configuration, not a secret. The OpenAI key must only be in Cloudflare
 Secrets (production) or `worker/.dev.vars` (local development).
 
 ---
@@ -141,7 +143,7 @@ CoverCraft/
 ├── worker/
 │   ├── index.js           # Cloudflare Worker (AI backend)
 │   ├── index.test.js      # Mocked Worker/API contract tests
-│   ├── .dev.vars.example  # Local Gemini secret template
+│   ├── .dev.vars.example  # Local OpenAI secret template
 │   └── wrangler.toml      # Worker configuration
 ├── .github/workflows/
 │   └── deploy.yml         # GitHub Actions deployment
@@ -157,7 +159,7 @@ CoverCraft/
 |----------|---------------------------------------|
 | Frontend | React, TypeScript, Vite, Tailwind CSS |
 | Icons    | Lucide React                          |
-| AI       | Google Gemini 3.8 Flash               |
+| AI       | OpenAI GPT-6 Luna (Responses API)     |
 | Backend  | Cloudflare Workers                    |
 | Hosting  | GitHub Pages                          |
 
@@ -172,7 +174,7 @@ npm run build                       # Type-check and production frontend build
 npm run deploy:worker -- --dry-run  # Validate the Worker deployment bundle
 ```
 
-The tests do not call Gemini or consume API quota. Run one manual analyze/generate/regenerate
+The tests do not call OpenAI or consume API quota. Run one manual analyze/generate/regenerate
 walkthrough with your real key before deploying.
 
 ---
@@ -185,8 +187,8 @@ Demo mode is built-in and requires no API key. Click **"Try Demo"** on the homep
 
 ## What's left to do manually
 
-- [ ] Add your Gemini key to `worker/.dev.vars` and complete a real local walkthrough
-- [ ] Add the production Gemini secret (`npm run secret:worker`)
+- [ ] Add your OpenAI key to `worker/.dev.vars` and complete a real local walkthrough
+- [ ] Add the production OpenAI secret (`npm run secret:worker`)
 - [ ] Deploy the Cloudflare Worker (`npm run deploy:worker`)
 - [ ] Add `VITE_WORKER_URL` as a GitHub Actions secret
 - [ ] Enable GitHub Pages (Settings → Pages → GitHub Actions)
@@ -196,8 +198,8 @@ Demo mode is built-in and requires no API key. Click **"Try Demo"** on the homep
 
 - Add rate limiting and abuse protection (for example, Cloudflare Rate Limiting and/or Turnstile).
   CORS protects browser access but does not prevent direct requests to the public Worker.
-- Add a privacy notice explaining that resume/job application data is sent to Google Gemini, and
-  review Google Cloud and Cloudflare data-handling terms.
+- Add a privacy notice explaining that resume/job application data is sent to OpenAI, and review
+  OpenAI and Cloudflare data-handling terms.
 - Resolve the remaining `npm audit` development-tool advisories when a compatible patched release
   is available; do not apply npm's suggested breaking downgrade without testing.
 - Add browser-level integration/accessibility tests and consider saving drafts across reloads.

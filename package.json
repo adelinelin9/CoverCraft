@@ -11,7 +11,7 @@
     "test": "node --test worker/index.test.js",
     "preview": "vite preview",
     "deploy:worker": "cd worker && wrangler deploy",
-    "secret:worker": "cd worker && wrangler secret put GEMINI_API_KEY"
+    "secret:worker": "cd worker && wrangler secret put OPENAI_API_KEY"
   },
   "dependencies": {
     "react": "^19.3.1",
