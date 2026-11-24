@@ -57,11 +57,15 @@ export default function App() {
   }
 
   async function handleAnalyze() {
+    if (isDemo) {
+      // Recommendations are pre-filled from handleDemoSelect — skip the API entirely
+      goToStep(2)
+      return
+    }
     const result = await analyzeExperience(resume, jobDescription)
     markStaleIfLetterExists()
     setRecommendations(result)
     setSelectedIds(new Set(result.slice(0, 3).map((recommendation) => recommendation.id)))
-    setIsDemo(false)
     goToStep(2)
   }
 
@@ -98,7 +102,7 @@ export default function App() {
     setAiVersion('')
     setAppliedSuggestions(new Set())
     setMaxStep(1)
-    goToStep(2)
+    goToStep(1)
   }
 
   function handleToggle(id: string) {
@@ -247,6 +251,7 @@ export default function App() {
             onChange={setCoverLetter}
             onRegenerate={handleRegenerate}
             onBack={() => setStep(3)}
+            onGetStarted={handleGetStarted}
           />
         )}
       </main>

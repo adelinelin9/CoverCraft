@@ -8,7 +8,7 @@
     "dev:worker": "cd worker && wrangler dev",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test": "node --test worker/index.test.js",
+    "test": "node --test worker/index.test.js && node --experimental-strip-types --test test/demo.test.js",
     "preview": "vite preview",
     "deploy:worker": "cd worker && wrangler deploy",
     "secret:worker": "cd worker && wrangler secret put OPENAI_API_KEY"

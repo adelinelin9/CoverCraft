@@ -21,6 +21,8 @@ interface Props {
   /** Returns the newly generated letter so we can track the "clean" version */
   onRegenerate: () => Promise<string>
   onBack: () => void
+  /** Resets all state and starts the real Get Started workflow from Step 1 */
+  onGetStarted: () => void
 }
 
 export default function StepCoverLetter({
@@ -34,6 +36,7 @@ export default function StepCoverLetter({
   onChange,
   onRegenerate,
   onBack,
+  onGetStarted,
 }: Props) {
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -338,6 +341,22 @@ export default function StepCoverLetter({
             </ul>
           )}
         </div>
+      )}
+
+      {/* Demo mode — nudge toward real workflow */}
+      {isDemo && suggestions.length > 0 && (
+        <p className="text-xs text-center text-purple-400 mb-5 leading-relaxed">
+          <Sparkles className="inline w-3 h-3 mr-0.5 -mt-px" />
+          Want to apply AI suggestions to your own cover letter?{' '}
+          <button
+            type="button"
+            onClick={onGetStarted}
+            className="font-semibold text-purple-500 hover:text-purple-700 underline underline-offset-2 transition-colors"
+          >
+            Get Started
+          </button>
+          {' '}to personalize your experience.
+        </p>
       )}
 
       {loading ? (
