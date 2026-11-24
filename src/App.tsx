@@ -36,6 +36,7 @@ export default function App() {
   // Lifted out of StepCoverLetter so they survive step navigation
   const [aiVersion, setAiVersion] = useState('')
   const [appliedSuggestions, setAppliedSuggestions] = useState<Set<number>>(new Set())
+  const [revisionInProgress, setRevisionInProgress] = useState(false)
 
   // True when inputs have changed after the cover letter was last generated.
   // Clears only on a fresh generate or regenerate — the letter is never changed silently.
@@ -203,7 +204,7 @@ export default function App() {
 
       <ProgressBar
         currentStep={numericStep}
-        onNavigate={(s) => setStep(s as NumericStep)}
+        onNavigate={revisionInProgress ? undefined : (s) => setStep(s as NumericStep)}
       />
 
       <main className="pt-2">
@@ -244,10 +245,11 @@ export default function App() {
             coverLetter={coverLetter}
             suggestions={suggestions}
             isDemo={isDemo}
-            isStale={letterIsStale}
+            isStale={!isDemo && letterIsStale}
             aiVersion={aiVersion}
             appliedSuggestions={appliedSuggestions}
             onAppliedSuggestionsChange={setAppliedSuggestions}
+            onRevisionProgressChange={setRevisionInProgress}
             onChange={setCoverLetter}
             onRegenerate={handleRegenerate}
             onBack={() => setStep(3)}
