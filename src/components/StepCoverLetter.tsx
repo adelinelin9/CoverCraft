@@ -12,6 +12,11 @@ interface Props {
   isDemo: boolean
   /** True when the user changed their selections or questionnaire after generating */
   isStale: boolean
+  /** The last AI-generated version — lifted to App so it survives step navigation */
+  aiVersion: string
+  /** Applied suggestion indices — lifted to App so they survive step navigation */
+  appliedSuggestions: Set<number>
+  onAppliedSuggestionsChange: (s: Set<number>) => void
   onChange: (value: string) => void
   /** Returns the newly generated letter so we can track the "clean" version */
   onRegenerate: () => Promise<string>
@@ -23,6 +28,9 @@ export default function StepCoverLetter({
   suggestions,
   isDemo,
   isStale,
+  aiVersion,
+  appliedSuggestions,
+  onAppliedSuggestionsChange,
   onChange,
   onRegenerate,
   onBack,
@@ -34,8 +42,7 @@ export default function StepCoverLetter({
   const [suggestionsOpen, setSuggestionsOpen] = useState(true)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Track the last AI-generated version so we can detect user edits
-  const [aiVersion, setAiVersion] = useState(coverLetter)
+  // Derived: true when the current letter differs from the last AI-generated version
   const isEdited = coverLetter !== aiVersion
 
   // Revision state
@@ -44,7 +51,6 @@ export default function StepCoverLetter({
   const [pendingRevision, setPendingRevision] = useState('')
   const [preRevisionSnapshot, setPreRevisionSnapshot] = useState('')
   const [previewTab, setPreviewTab] = useState<'before' | 'after'>('after')
-  const [appliedIndices, setAppliedIndices] = useState<Set<number>>(new Set())
 
   async function handleCopy() {
     try {
@@ -86,7 +92,7 @@ export default function StepCoverLetter({
     onChange(pendingRevision)
     // Keep aiVersion as the original AI letter — the revised letter counts as an edit
     // so the existing Edited badge and Regenerate confirmation remain consistent
-    setAppliedIndices((prev) => new Set(prev).add(applyingIndex!))
+    onAppliedSuggestionsChange(new Set(appliedSuggestions).add(applyingIndex!))
     setRevisionState('idle')
     setApplyingIndex(null)
     setPendingRevision('')
@@ -110,8 +116,7 @@ export default function StepCoverLetter({
     setLoading(true)
     setError(null)
     try {
-      const newLetter = await onRegenerate()
-      setAiVersion(newLetter)
+      await onRegenerate()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.')
     } finally {
@@ -284,7 +289,7 @@ export default function StepCoverLetter({
           {suggestionsOpen && (
             <ul className="px-5 pb-4 space-y-3 border-t border-purple-100">
               {suggestions.map((s, i) => {
-                const isApplied = appliedIndices.has(i)
+                const isApplied = appliedSuggestions.has(i)
                 const isCurrentlyApplying = applyingIndex === i && revisionState === 'loading'
                 const applyDisabled = revisionState !== 'idle' || loading || isApplied || isDemo
 
