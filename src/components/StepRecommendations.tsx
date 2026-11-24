@@ -26,12 +26,10 @@ export default function StepRecommendations({
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-gray-800 mb-2">Your experience matches</h2>
         <p className="text-gray-500 text-sm max-w-sm mx-auto">
-          AI identified these experiences from your resume as relevant to the role. This is{' '}
-          <strong className="text-gray-600">not</strong> an overall job-fit score —
-          it's a starting point. Select the experiences you want to highlight in your cover letter,
-          then deselect any that don't feel right.
+          AI matched these to the role —{' '}
+          <strong className="text-gray-600">not</strong> a job-fit score. Select what you want to
+          highlight in your cover letter.
         </p>
-        <p className="text-xs text-purple-500 mt-2">Tap any card to select or deselect it.</p>
         <div className="flex items-center justify-center gap-3 mt-3 flex-wrap">
           {/* Selection count badge */}
           <div
