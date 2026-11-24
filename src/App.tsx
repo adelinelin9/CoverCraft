@@ -6,18 +6,13 @@ import StepDetails from './components/StepDetails'
 import StepRecommendations from './components/StepRecommendations'
 import StepQuestionnaire from './components/StepQuestionnaire'
 import StepCoverLetter from './components/StepCoverLetter'
+import DemoSelect from './components/DemoSelect'
 import type { ExperienceRecommendation, QuestionnaireAnswers } from './types'
 import { analyzeExperience, generateCoverLetter } from './services/api'
-import {
-  DEMO_RESUME,
-  DEMO_JOB,
-  DEMO_RECOMMENDATIONS,
-  DEMO_COVER_LETTER,
-  DEMO_SUGGESTIONS,
-} from './demo'
+import { DEMO_SCENARIOS } from './demo'
 
 type NumericStep = 1 | 2 | 3 | 4
-type Step = 'home' | NumericStep
+type Step = 'home' | 'demo-select' | NumericStep
 
 export default function App() {
   const [step, setStep] = useState<Step>('home')
@@ -36,6 +31,7 @@ export default function App() {
   const [coverLetter, setCoverLetter] = useState('')
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [isDemo, setIsDemo] = useState(false)
+  const [demoScenarioId, setDemoScenarioId] = useState<string | null>(null)
 
   // True when inputs have changed after the cover letter was last generated.
   // Clears only on a fresh generate or regenerate — the letter is never changed silently.
@@ -74,17 +70,26 @@ export default function App() {
     setCoverLetter('')
     setSuggestions([])
     setIsDemo(false)
+    setDemoScenarioId(null)
     setLetterIsStale(false)
     setMaxStep(1)
     goToStep(1)
   }
 
-  function handleDemoStart() {
-    setResume(DEMO_RESUME)
-    setJobDescription(DEMO_JOB)
-    setRecommendations(DEMO_RECOMMENDATIONS)
-    setSelectedIds(new Set(DEMO_RECOMMENDATIONS.slice(0, 3).map((r) => r.id)))
+  function handleDemoSelect(scenarioId: string) {
+    const scenario = DEMO_SCENARIOS.find((s) => s.id === scenarioId)
+    if (!scenario) return
+    setResume(scenario.resume)
+    setJobDescription(scenario.jobDescription)
+    setRecommendations(scenario.recommendations)
+    setSelectedIds(new Set(scenario.recommendations.slice(0, 3).map((r) => r.id)))
+    setQuestionnaire(scenario.questionnaire)
+    setCoverLetter('')
+    setSuggestions([])
     setIsDemo(true)
+    setDemoScenarioId(scenarioId)
+    setLetterIsStale(false)
+    setMaxStep(1)
     goToStep(1)
   }
 
@@ -120,8 +125,9 @@ export default function App() {
 
   async function handleGenerate() {
     if (isDemo) {
-      setCoverLetter(DEMO_COVER_LETTER)
-      setSuggestions(DEMO_SUGGESTIONS)
+      const scenario = DEMO_SCENARIOS.find((s) => s.id === demoScenarioId) ?? DEMO_SCENARIOS[0]
+      setCoverLetter(scenario.coverLetter)
+      setSuggestions(scenario.suggestions)
       setLetterIsStale(false)
     } else {
       await requestCoverLetter()
@@ -131,16 +137,27 @@ export default function App() {
 
   async function handleRegenerate(): Promise<string> {
     if (isDemo) {
-      setCoverLetter(DEMO_COVER_LETTER)
-      setSuggestions(DEMO_SUGGESTIONS)
+      const scenario = DEMO_SCENARIOS.find((s) => s.id === demoScenarioId) ?? DEMO_SCENARIOS[0]
+      setCoverLetter(scenario.coverLetter)
+      setSuggestions(scenario.suggestions)
       setLetterIsStale(false)
-      return DEMO_COVER_LETTER
+      return scenario.coverLetter
     }
     return requestCoverLetter()
   }
 
   if (step === 'home') {
-    return <HomePage onGetStarted={handleGetStarted} onDemo={handleDemoStart} />
+    return <HomePage onGetStarted={handleGetStarted} onDemo={() => setStep('demo-select')} />
+  }
+
+  if (step === 'demo-select') {
+    return (
+      <DemoSelect
+        scenarios={DEMO_SCENARIOS}
+        onSelect={handleDemoSelect}
+        onBack={() => setStep('home')}
+      />
+    )
   }
 
   const numericStep = step as NumericStep
@@ -175,7 +192,7 @@ export default function App() {
             jobDescription={jobDescription}
             onChange={handleFieldChange}
             onAnalyze={handleAnalyze}
-            onFillDemo={handleDemoStart}
+            onFillDemo={() => setStep('demo-select')}
             isDemo={isDemo}
           />
         )}
