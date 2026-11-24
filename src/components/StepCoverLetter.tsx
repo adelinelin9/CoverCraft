@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Copy, CheckCheck, Sparkles, RotateCcw, Lightbulb, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { Copy, CheckCheck, Sparkles, RotateCcw, Lightbulb, ChevronDown, ChevronUp, RefreshCw, Pencil } from 'lucide-react'
 import LoadingSpinner from './LoadingSpinner'
 import ErrorBanner from './ErrorBanner'
 
@@ -29,6 +29,7 @@ export default function StepCoverLetter({
   const [error, setError] = useState<string | null>(null)
   const [confirmRegen, setConfirmRegen] = useState(false)
   const [suggestionsOpen, setSuggestionsOpen] = useState(true)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Track the last AI-generated version so we can detect user edits
   const [aiVersion, setAiVersion] = useState(coverLetter)
@@ -126,15 +127,25 @@ export default function StepCoverLetter({
           <span className="text-xs font-medium text-purple-600 uppercase tracking-wide">
             Cover Letter
           </span>
-          {isEdited && (
+          {isEdited ? (
             <span className="text-xs text-gray-400 italic">Edited</span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => textareaRef.current?.focus()}
+              className="flex items-center gap-1 text-xs text-purple-500 hover:text-purple-700 font-medium transition-colors"
+            >
+              <Pencil className="w-3 h-3" />
+              Edit Letter
+            </button>
           )}
         </div>
         <textarea
+          ref={textareaRef}
           value={coverLetter}
           onChange={(e) => onChange(e.target.value)}
           rows={18}
-          className="w-full px-5 py-4 text-sm text-gray-700 leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-purple-200"
+          className="w-full px-5 py-4 text-sm text-gray-700 leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-purple-200 cursor-text"
           style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
         />
       </div>

@@ -59,16 +59,30 @@ export default function App() {
     const result = await analyzeExperience(resume, jobDescription)
     markStaleIfLetterExists()
     setRecommendations(result)
-    setSelectedIds(new Set(result.map((recommendation) => recommendation.id)))
+    setSelectedIds(new Set(result.slice(0, 3).map((recommendation) => recommendation.id)))
     setIsDemo(false)
     goToStep(2)
+  }
+
+  function handleGetStarted() {
+    setResume('')
+    setJobDescription('')
+    setRecommendations([])
+    setSelectedIds(new Set())
+    setQuestionnaire({ interest: '', strengths: '', additionalInfo: '' })
+    setCoverLetter('')
+    setSuggestions([])
+    setIsDemo(false)
+    setLetterIsStale(false)
+    setMaxStep(1)
+    goToStep(1)
   }
 
   function handleDemoStart() {
     setResume(DEMO_RESUME)
     setJobDescription(DEMO_JOB)
     setRecommendations(DEMO_RECOMMENDATIONS)
-    setSelectedIds(new Set(DEMO_RECOMMENDATIONS.map((r) => r.id)))
+    setSelectedIds(new Set(DEMO_RECOMMENDATIONS.slice(0, 3).map((r) => r.id)))
     setIsDemo(true)
     goToStep(1)
   }
@@ -125,7 +139,7 @@ export default function App() {
   }
 
   if (step === 'home') {
-    return <HomePage onGetStarted={() => goToStep(1)} onDemo={handleDemoStart} />
+    return <HomePage onGetStarted={handleGetStarted} onDemo={handleDemoStart} />
   }
 
   const numericStep = step as NumericStep
@@ -133,7 +147,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#FAF9F7]">
       {/* Top bar */}
-      <header className="border-b border-purple-100 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+      <header className="border-b border-purple-100 bg-white sticky top-0 z-20">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-2">
           <button
             type="button"

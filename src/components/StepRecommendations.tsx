@@ -26,9 +26,12 @@ export default function StepRecommendations({
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-gray-800 mb-2">Your experience matches</h2>
         <p className="text-gray-500 text-sm max-w-sm mx-auto">
-          Here's what AI found in your resume that's most relevant to this role. Select the
-          experiences you want to highlight in your cover letter.
+          AI identified these experiences from your resume as relevant to the role. This is{' '}
+          <strong className="text-gray-600">not</strong> an overall job-fit score —
+          it's a starting point. Select the experiences you want to highlight in your cover letter,
+          then deselect any that don't feel right.
         </p>
+        <p className="text-xs text-purple-500 mt-2">Tap any card to select or deselect it.</p>
         <div className="flex items-center justify-center gap-3 mt-3 flex-wrap">
           {/* Selection count badge */}
           <div
@@ -87,13 +90,6 @@ export default function StepRecommendations({
       {selectedCount === 0 && (
         <p className="text-center text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 mb-5">
           Select at least one experience to continue.
-        </p>
-      )}
-
-      {selectedCount > 0 && (
-        <p className="text-center text-xs text-gray-400 mb-5">
-          These {selectedCount} experience{selectedCount !== 1 ? 's' : ''} will be passed to AI
-          when generating your letter.
         </p>
       )}
 
