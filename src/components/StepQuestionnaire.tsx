@@ -103,7 +103,7 @@ export default function StepQuestionnaire({
             onBlur={() => setTouched((t) => ({ ...t, interest: true }))}
             placeholder="e.g. I love that this role combines front-end engineering with direct user impact…"
             rows={3}
-            className={`w-full rounded-xl border px-4 py-3 text-sm text-gray-700 placeholder-gray-300 resize-none transition-colors focus:outline-none focus:ring-2 focus:ring-purple-300 ${
+            className={`w-full rounded-xl border px-4 py-3 text-sm text-gray-700 placeholder-gray-300 resize-y transition-colors focus:outline-none focus:ring-2 focus:ring-purple-300 ${
               touched.interest && !answers.interest.trim()
                 ? 'border-red-300 bg-red-50'
                 : 'border-purple-100 bg-white'
@@ -133,7 +133,7 @@ export default function StepQuestionnaire({
             onBlur={() => setTouched((t) => ({ ...t, strengths: true }))}
             placeholder="e.g. I built a real-time dashboard that cut our team's reporting time in half — I'd love that to come through in the letter…"
             rows={3}
-            className={`w-full rounded-xl border px-4 py-3 text-sm text-gray-700 placeholder-gray-300 resize-none transition-colors focus:outline-none focus:ring-2 focus:ring-purple-300 ${
+            className={`w-full rounded-xl border px-4 py-3 text-sm text-gray-700 placeholder-gray-300 resize-y transition-colors focus:outline-none focus:ring-2 focus:ring-purple-300 ${
               touched.strengths && !answers.strengths.trim()
                 ? 'border-red-300 bg-red-50'
                 : 'border-purple-100 bg-white'
@@ -147,7 +147,26 @@ export default function StepQuestionnaire({
           )}
         </div>
 
-        {/* Q3 (optional) */}
+        {/* Q3 (optional) — accomplishment impact */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">
+            What impact did your accomplishments have?
+            <span className="text-gray-400 text-xs font-normal ml-1">(optional)</span>
+          </label>
+          <p className="text-xs text-gray-400 mb-2">
+            Share any results, numbers, or outcomes you'd like highlighted. It's okay to leave this
+            blank.
+          </p>
+          <textarea
+            value={answers.accomplishmentImpact}
+            onChange={(e) => onChange('accomplishmentImpact', e.target.value)}
+            placeholder="e.g. Reduced load time by 40%, grew the user base from 500 to 5,000 in six months…"
+            rows={3}
+            className="w-full rounded-xl border border-purple-100 bg-white px-4 py-3 text-sm text-gray-700 placeholder-gray-300 resize-y transition-colors focus:outline-none focus:ring-2 focus:ring-purple-300"
+          />
+        </div>
+
+        {/* Q4 (optional) */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1">
             Is there anything else you'd like the employer to know?
@@ -161,7 +180,7 @@ export default function StepQuestionnaire({
             onChange={(e) => onChange('additionalInfo', e.target.value)}
             placeholder="e.g. I'm relocating to the area in January and am very motivated to establish myself here…"
             rows={3}
-            className="w-full rounded-xl border border-purple-100 bg-white px-4 py-3 text-sm text-gray-700 placeholder-gray-300 resize-none transition-colors focus:outline-none focus:ring-2 focus:ring-purple-300"
+            className="w-full rounded-xl border border-purple-100 bg-white px-4 py-3 text-sm text-gray-700 placeholder-gray-300 resize-y transition-colors focus:outline-none focus:ring-2 focus:ring-purple-300"
           />
         </div>
 

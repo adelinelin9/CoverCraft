@@ -30,6 +30,7 @@ export default function App() {
   const [questionnaire, setQuestionnaire] = useState<QuestionnaireAnswers>({
     interest: '',
     strengths: '',
+    accomplishmentImpact: '',
     additionalInfo: '',
   })
   const [coverLetter, setCoverLetter] = useState('')
@@ -69,7 +70,7 @@ export default function App() {
     setJobDescription('')
     setRecommendations([])
     setSelectedIds(new Set())
-    setQuestionnaire({ interest: '', strengths: '', additionalInfo: '' })
+    setQuestionnaire({ interest: '', strengths: '', accomplishmentImpact: '', additionalInfo: '' })
     setCoverLetter('')
     setSuggestions([])
     setIsDemo(false)

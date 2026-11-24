@@ -60,7 +60,7 @@ export default function HomePage({ onGetStarted, onDemo }: Props) {
         </div>
 
         {/* How it works — 4 steps, 2×2 grid */}
-        <div className="grid grid-cols-2 gap-4 w-full text-left">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full text-left">
           {[
             {
               icon: FileText,

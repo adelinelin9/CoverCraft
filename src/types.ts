@@ -8,6 +8,7 @@ export interface ExperienceRecommendation {
 export interface QuestionnaireAnswers {
   interest: string
   strengths: string
+  accomplishmentImpact: string
   additionalInfo: string
 }
 

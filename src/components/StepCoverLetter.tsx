@@ -133,9 +133,9 @@ export default function StepCoverLetter({
             <button
               type="button"
               onClick={() => textareaRef.current?.focus()}
-              className="flex items-center gap-1 text-xs text-purple-500 hover:text-purple-700 font-medium transition-colors"
+              className="flex items-center gap-1.5 text-xs text-purple-500 hover:text-purple-700 font-medium transition-colors py-1.5 px-2.5 -mr-2 rounded-lg hover:bg-purple-100/60"
             >
-              <Pencil className="w-3 h-3" />
+              <Pencil className="w-3.5 h-3.5" />
               Edit Letter
             </button>
           )}
@@ -144,8 +144,7 @@ export default function StepCoverLetter({
           ref={textareaRef}
           value={coverLetter}
           onChange={(e) => onChange(e.target.value)}
-          rows={18}
-          className="w-full px-5 py-4 text-sm text-gray-700 leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-purple-200 cursor-text"
+          className="w-full px-5 py-4 text-sm text-gray-700 leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-purple-200 cursor-text min-h-[16rem] sm:min-h-[28rem]"
           style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
         />
       </div>

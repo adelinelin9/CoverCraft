@@ -60,6 +60,10 @@ export default function ProgressBar({ currentStep, onNavigate }: Props) {
           )
         })}
       </div>
+      {/* Active step name — only shown on mobile where labels are hidden */}
+      <p className="sm:hidden text-center text-xs font-medium text-purple-700 mt-3">
+        Step {currentStep}: {STEPS[currentStep - 1]}
+      </p>
     </div>
   )
 }

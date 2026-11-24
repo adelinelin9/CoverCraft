@@ -272,7 +272,7 @@ ${experienceList}
 APPLICANT'S OWN WORDS:
 - What interests them about this position: "${questionnaire.interest}"
 - A specific experience or accomplishment they want to focus on: "${questionnaire.strengths}"
-- Additional context: "${questionnaire.additionalInfo || 'None provided.'}"
+${questionnaire.accomplishmentImpact?.trim() ? `- Impact or results they want highlighted: "${questionnaire.accomplishmentImpact}"\n` : ''}- Additional context: "${questionnaire.additionalInfo || 'None provided.'}"
 
 INSTRUCTIONS:
 - Write a professional cover letter, 250–350 words.
