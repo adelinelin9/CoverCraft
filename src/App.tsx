@@ -33,6 +33,10 @@ export default function App() {
   const [isDemo, setIsDemo] = useState(false)
   const [demoScenarioId, setDemoScenarioId] = useState<string | null>(null)
 
+  // Lifted out of StepCoverLetter so they survive step navigation
+  const [aiVersion, setAiVersion] = useState('')
+  const [appliedSuggestions, setAppliedSuggestions] = useState<Set<number>>(new Set())
+
   // True when inputs have changed after the cover letter was last generated.
   // Clears only on a fresh generate or regenerate — the letter is never changed silently.
   const [letterIsStale, setLetterIsStale] = useState(false)
@@ -72,6 +76,8 @@ export default function App() {
     setIsDemo(false)
     setDemoScenarioId(null)
     setLetterIsStale(false)
+    setAiVersion('')
+    setAppliedSuggestions(new Set())
     setMaxStep(1)
     goToStep(1)
   }
@@ -89,8 +95,10 @@ export default function App() {
     setIsDemo(true)
     setDemoScenarioId(scenarioId)
     setLetterIsStale(false)
+    setAiVersion('')
+    setAppliedSuggestions(new Set())
     setMaxStep(1)
-    goToStep(1)
+    goToStep(2)
   }
 
   function handleToggle(id: string) {
@@ -129,8 +137,12 @@ export default function App() {
       setCoverLetter(scenario.coverLetter)
       setSuggestions(scenario.suggestions)
       setLetterIsStale(false)
+      setAiVersion(scenario.coverLetter)
+      setAppliedSuggestions(new Set())
     } else {
-      await requestCoverLetter()
+      const letter = await requestCoverLetter()
+      setAiVersion(letter)
+      setAppliedSuggestions(new Set())
     }
     goToStep(4)
   }
@@ -141,9 +153,14 @@ export default function App() {
       setCoverLetter(scenario.coverLetter)
       setSuggestions(scenario.suggestions)
       setLetterIsStale(false)
+      setAiVersion(scenario.coverLetter)
+      setAppliedSuggestions(new Set())
       return scenario.coverLetter
     }
-    return requestCoverLetter()
+    const letter = await requestCoverLetter()
+    setAiVersion(letter)
+    setAppliedSuggestions(new Set())
+    return letter
   }
 
   if (step === 'home') {
@@ -224,6 +241,9 @@ export default function App() {
             suggestions={suggestions}
             isDemo={isDemo}
             isStale={letterIsStale}
+            aiVersion={aiVersion}
+            appliedSuggestions={appliedSuggestions}
+            onAppliedSuggestionsChange={setAppliedSuggestions}
             onChange={setCoverLetter}
             onRegenerate={handleRegenerate}
             onBack={() => setStep(3)}
