@@ -17,6 +17,10 @@ export interface GenerateResult {
   suggestions: string[]
 }
 
+export interface ReviseResult {
+  revisedLetter: string
+}
+
 export interface AppState {
   step: number
   resume: string

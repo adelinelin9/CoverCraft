@@ -304,6 +304,30 @@ Then provide 2–3 short, specific, actionable suggestions for how the applicant
   return { coverLetter, suggestions }
 }
 
+async function handleRevise(body, env) {
+  const { coverLetter, suggestion } = body
+
+  if (typeof coverLetter !== 'string' || coverLetter.trim().length < 50)
+    throw { status: 400, message: 'Cover letter must be at least 50 characters.' }
+  if (typeof suggestion !== 'string' || !suggestion.trim())
+    throw { status: 400, message: 'Suggestion must be a non-empty string.' }
+
+  const prompt = `You are carefully editing a professional cover letter. Apply the following suggestion, making only the specific change it describes. Preserve all other sentences, structure, and details exactly as written. Never invent accomplishments, metrics, or details not present in the original.
+
+CURRENT COVER LETTER:
+"""
+${coverLetter.slice(0, 6000)}
+"""
+
+SUGGESTION TO APPLY:
+"${suggestion}"
+
+Return only the revised cover letter, with no explanation, preamble, or metadata.`
+
+  const revisedLetter = await openai(prompt, env)
+  return { revisedLetter: revisedLetter.trim() }
+}
+
 // ─── Main fetch handler ───────────────────────────────────────────────────────
 
 export default {
@@ -351,6 +375,11 @@ export default {
 
       if (url.pathname === '/generate') {
         const result = await handleGenerate(body, env)
+        return json(result, 200, origin, env)
+      }
+
+      if (url.pathname === '/revise') {
+        const result = await handleRevise(body, env)
         return json(result, 200, origin, env)
       }
 

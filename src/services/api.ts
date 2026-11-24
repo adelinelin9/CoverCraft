@@ -2,6 +2,7 @@ import type {
   ExperienceRecommendation,
   GenerateResult,
   QuestionnaireAnswers,
+  ReviseResult,
 } from '../types'
 
 interface GenerateCoverLetterInput {
@@ -111,4 +112,20 @@ export async function generateCoverLetter({
     coverLetter: data.coverLetter,
     suggestions: data.suggestions,
   }
+}
+
+export async function reviseCoverLetter({
+  coverLetter,
+  suggestion,
+}: {
+  coverLetter: string
+  suggestion: string
+}): Promise<ReviseResult> {
+  const data = await post('/revise', { coverLetter, suggestion })
+
+  if (!isRecord(data) || typeof data.revisedLetter !== 'string' || !data.revisedLetter.trim()) {
+    throw new Error('The AI service returned an unexpected response. Please try again.')
+  }
+
+  return { revisedLetter: data.revisedLetter }
 }
