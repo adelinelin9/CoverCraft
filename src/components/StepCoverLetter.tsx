@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Copy, CheckCheck, Sparkles, RotateCcw, Lightbulb, ChevronDown, ChevronUp, RefreshCw, Pencil, Loader2, Check, X } from 'lucide-react'
 import LoadingSpinner from './LoadingSpinner'
 import ErrorBanner from './ErrorBanner'
@@ -21,6 +21,8 @@ interface Props {
   /** Returns the newly generated letter so we can track the "clean" version */
   onRegenerate: () => Promise<string>
   onBack: () => void
+  /** Called when revision preview is entered or exited so App can guard ProgressBar navigation */
+  onRevisionProgressChange: (inProgress: boolean) => void
   /** Resets all state and starts the real Get Started workflow from Step 1 */
   onGetStarted: () => void
 }
@@ -36,6 +38,7 @@ export default function StepCoverLetter({
   onChange,
   onRegenerate,
   onBack,
+  onRevisionProgressChange,
   onGetStarted,
 }: Props) {
   const [copied, setCopied] = useState(false)
@@ -54,6 +57,22 @@ export default function StepCoverLetter({
   const [pendingRevision, setPendingRevision] = useState('')
   const [preRevisionSnapshot, setPreRevisionSnapshot] = useState('')
   const [previewTab, setPreviewTab] = useState<'before' | 'after'>('after')
+  const [confirmNav, setConfirmNav] = useState(false)
+
+  // Keep App in sync so ProgressBar navigation can be disabled during preview.
+  // The cleanup fires on unmount (e.g. logo → home), preventing stale `true` in App.
+  useEffect(() => {
+    onRevisionProgressChange(revisionState === 'preview')
+    return () => onRevisionProgressChange(false)
+  }, [revisionState, onRevisionProgressChange])
+
+  function handleBack() {
+    if (revisionState === 'preview') {
+      setConfirmNav(true)
+      return
+    }
+    onBack()
+  }
 
   async function handleCopy() {
     try {
@@ -359,6 +378,39 @@ export default function StepCoverLetter({
         </p>
       )}
 
+      {/* Navigation guard — shown when user tries to leave during revision preview */}
+      {confirmNav && (
+        <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <p className="text-sm text-amber-800 mb-3">
+            You have an unsaved AI revision. What would you like to do?
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => { handleAcceptRevision(); onBack() }}
+              className="flex items-center gap-1.5 bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            >
+              <Check className="w-3.5 h-3.5" />
+              Accept & Leave
+            </button>
+            <button
+              type="button"
+              onClick={() => { handleUndoRevision(); onBack() }}
+              className="bg-white hover:bg-amber-50 text-amber-700 text-sm font-medium px-4 py-2 rounded-lg border border-amber-200 transition-colors"
+            >
+              Discard & Leave
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmNav(false)}
+              className="bg-white hover:bg-gray-50 text-gray-600 text-sm font-medium px-4 py-2 rounded-lg border border-gray-200 transition-colors"
+            >
+              Keep Reviewing
+            </button>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <LoadingSpinner message="Regenerating your cover letter…" />
       ) : (
@@ -366,7 +418,7 @@ export default function StepCoverLetter({
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={onBack}
+              onClick={handleBack}
               className="bg-white hover:bg-gray-50 text-gray-600 font-medium py-3 px-5 rounded-xl border border-gray-200 transition-colors text-sm"
             >
               ← Back

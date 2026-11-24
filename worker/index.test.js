@@ -225,3 +225,44 @@ test('rejects invalid generation input before calling OpenAI', async () => {
   assert.equal(response.status, 400)
   assert.match((await response.json()).error, /at least one valid experience/)
 })
+
+const REVISE_BODY = {
+  coverLetter:
+    'I am excited to apply for this role. My experience with React and TypeScript, combined with my work on accessible UI components, makes me a strong candidate for your frontend team.',
+  suggestion: 'Add a specific metric to show the impact of your React work.',
+}
+
+test('revises a cover letter and returns the updated text', async (t) => {
+  stubFetch(t, async (_url, init) => {
+    const upstreamBody = JSON.parse(init.body)
+    assert.match(upstreamBody.input, /CURRENT COVER LETTER/)
+    assert.match(upstreamBody.input, /SUGGESTION TO APPLY/)
+    assert.match(upstreamBody.input, /Add a specific metric/)
+    assert.equal(upstreamBody.text, undefined, 'revise must not use structured output format')
+    return openAIResponse('I am excited to apply — I improved render performance by 35% using React memoization.')
+  })
+
+  const response = await worker.fetch(request('/revise', REVISE_BODY), ENV)
+  assert.equal(response.status, 200)
+  assert.deepEqual(await response.json(), {
+    revisedLetter: 'I am excited to apply — I improved render performance by 35% using React memoization.',
+  })
+})
+
+test('rejects a cover letter that is too short for revision', async () => {
+  const response = await worker.fetch(
+    request('/revise', { coverLetter: 'Too short.', suggestion: 'Make it better.' }),
+    ENV,
+  )
+  assert.equal(response.status, 400)
+  assert.match((await response.json()).error, /at least 50 characters/)
+})
+
+test('rejects a revision request with an empty suggestion', async () => {
+  const response = await worker.fetch(
+    request('/revise', { ...REVISE_BODY, suggestion: '   ' }),
+    ENV,
+  )
+  assert.equal(response.status, 400)
+  assert.match((await response.json()).error, /non-empty string/)
+})
