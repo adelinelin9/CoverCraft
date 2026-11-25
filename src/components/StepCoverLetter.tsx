@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Copy, CheckCheck, Sparkles, RotateCcw, Lightbulb, ChevronDown, ChevronUp, RefreshCw, Pencil, Loader2, Check, X } from 'lucide-react'
+import { Copy, CheckCheck, Sparkles, RotateCcw, Lightbulb, ChevronDown, ChevronUp, RefreshCw, Pencil, Loader2, Check, X, Info } from 'lucide-react'
 import LoadingSpinner from './LoadingSpinner'
 import ErrorBanner from './ErrorBanner'
 import { reviseCoverLetter } from '../services/api'
@@ -14,6 +14,9 @@ interface Props {
   isStale: boolean
   /** The last AI-generated version — lifted to App so it survives step navigation */
   aiVersion: string
+  /** Draft counter — lifted to App so it survives step navigation */
+  draftVersion: number
+  onDraftVersionChange: (v: number) => void
   /** Applied suggestion indices — lifted to App so they survive step navigation */
   appliedSuggestions: Set<number>
   onAppliedSuggestionsChange: (s: Set<number>) => void
@@ -33,6 +36,8 @@ export default function StepCoverLetter({
   isDemo,
   isStale,
   aiVersion,
+  draftVersion,
+  onDraftVersionChange,
   appliedSuggestions,
   onAppliedSuggestionsChange,
   onChange,
@@ -44,7 +49,7 @@ export default function StepCoverLetter({
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [draftVersion, setDraftVersion] = useState(1)
+  const [infoMessage, setInfoMessage] = useState<string | null>(null)
   const [confirmRegen, setConfirmRegen] = useState(false)
   const [suggestionsOpen, setSuggestionsOpen] = useState(true)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -66,12 +71,6 @@ export default function StepCoverLetter({
     onRevisionProgressChange(revisionState === 'preview')
     return () => onRevisionProgressChange(false)
   }, [revisionState, onRevisionProgressChange])
-
-  useEffect(() => {
-    if (aiVersion.trim()) {
-      setDraftVersion(1)
-    }
-  }, [aiVersion])
 
   function handleBack() {
     if (revisionState === 'preview') {
@@ -96,12 +95,13 @@ export default function StepCoverLetter({
     setRevisionState('loading')
     setPreRevisionSnapshot(coverLetter)
     setError(null)
+    setInfoMessage(null)
 
     try {
       const { revisedLetter } = await reviseCoverLetter({ coverLetter, suggestion })
 
       if (revisedLetter.trim() === coverLetter.trim()) {
-        setError('This suggestion is already reflected in your letter. Try another or edit manually.')
+        setInfoMessage('No changes were made. This suggestion may require additional information. Try another suggestion or edit your letter manually.')
         setRevisionState('idle')
         setApplyingIndex(null)
         return
@@ -122,7 +122,7 @@ export default function StepCoverLetter({
     // Keep aiVersion as the original AI letter — the revised letter counts as an edit
     // so the existing Edited badge and Regenerate confirmation remain consistent
     onAppliedSuggestionsChange(new Set(appliedSuggestions).add(applyingIndex!))
-    setDraftVersion((v) => v + 1)
+    onDraftVersionChange(draftVersion + 1)
     setRevisionState('idle')
     setApplyingIndex(null)
     setPendingRevision('')
@@ -185,6 +185,21 @@ export default function StepCoverLetter({
       {error && (
         <div className="mb-5">
           <ErrorBanner message={error} onDismiss={() => setError(null)} />
+        </div>
+      )}
+
+      {infoMessage && (
+        <div className="flex items-start gap-3 bg-purple-50 border border-purple-200 rounded-xl px-4 py-3 mb-5">
+          <Info className="w-4 h-4 text-purple-500 mt-0.5 shrink-0" />
+          <p className="flex-1 text-sm text-purple-800">{infoMessage}</p>
+          <button
+            type="button"
+            onClick={() => setInfoMessage(null)}
+            className="text-purple-400 hover:text-purple-600 transition-colors shrink-0"
+            aria-label="Dismiss"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -398,7 +413,7 @@ export default function StepCoverLetter({
               className="flex items-center gap-1.5 bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
             >
               <Check className="w-3.5 h-3.5" />
-              Accept & Leave
+              Save & Leave
             </button>
             <button
               type="button"

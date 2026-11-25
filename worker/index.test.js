@@ -266,3 +266,44 @@ test('rejects a revision request with an empty suggestion', async () => {
   assert.equal(response.status, 400)
   assert.match((await response.json()).error, /non-empty string/)
 })
+
+test('includes accomplishmentImpact in the generate prompt when provided', async (t) => {
+  stubFetch(t, async (_url, init) => {
+    const upstreamBody = JSON.parse(init.body)
+    assert.match(upstreamBody.input, /Impact or results they want highlighted/)
+    assert.match(upstreamBody.input, /Improved team onboarding time by 30%/)
+    return openAIResponse('Cover letter.\n\n---SUGGESTIONS---\n1. Add more detail.')
+  })
+
+  const response = await worker.fetch(
+    request('/generate', {
+      ...GENERATE_BODY,
+      questionnaire: {
+        ...GENERATE_BODY.questionnaire,
+        accomplishmentImpact: 'Improved team onboarding time by 30%',
+      },
+    }),
+    ENV,
+  )
+  assert.equal(response.status, 200)
+})
+
+test('omits accomplishmentImpact from the generate prompt when blank', async (t) => {
+  stubFetch(t, async (_url, init) => {
+    const upstreamBody = JSON.parse(init.body)
+    assert.doesNotMatch(upstreamBody.input, /Impact or results they want highlighted/)
+    return openAIResponse('Cover letter.\n\n---SUGGESTIONS---\n1. Add more detail.')
+  })
+
+  const response = await worker.fetch(
+    request('/generate', {
+      ...GENERATE_BODY,
+      questionnaire: {
+        ...GENERATE_BODY.questionnaire,
+        accomplishmentImpact: '',
+      },
+    }),
+    ENV,
+  )
+  assert.equal(response.status, 200)
+})

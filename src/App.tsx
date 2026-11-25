@@ -35,6 +35,7 @@ export default function App() {
 
   // Lifted out of StepCoverLetter so they survive step navigation
   const [aiVersion, setAiVersion] = useState('')
+  const [draftVersion, setDraftVersion] = useState(1)
   const [appliedSuggestions, setAppliedSuggestions] = useState<Set<number>>(new Set())
   const [revisionInProgress, setRevisionInProgress] = useState(false)
 
@@ -82,6 +83,7 @@ export default function App() {
     setDemoScenarioId(null)
     setLetterIsStale(false)
     setAiVersion('')
+    setDraftVersion(1)
     setAppliedSuggestions(new Set())
     setMaxStep(1)
     goToStep(1)
@@ -101,6 +103,7 @@ export default function App() {
     setDemoScenarioId(scenarioId)
     setLetterIsStale(false)
     setAiVersion('')
+    setDraftVersion(1)
     setAppliedSuggestions(new Set())
     setMaxStep(1)
     goToStep(1)
@@ -143,10 +146,12 @@ export default function App() {
       setSuggestions(scenario.suggestions)
       setLetterIsStale(false)
       setAiVersion(scenario.coverLetter)
+      setDraftVersion(1)
       setAppliedSuggestions(new Set())
     } else {
       const letter = await requestCoverLetter()
       setAiVersion(letter)
+      setDraftVersion(1)
       setAppliedSuggestions(new Set())
     }
     goToStep(4)
@@ -159,11 +164,13 @@ export default function App() {
       setSuggestions(scenario.suggestions)
       setLetterIsStale(false)
       setAiVersion(scenario.coverLetter)
+      setDraftVersion(1)
       setAppliedSuggestions(new Set())
       return scenario.coverLetter
     }
     const letter = await requestCoverLetter()
     setAiVersion(letter)
+    setDraftVersion(1)
     setAppliedSuggestions(new Set())
     return letter
   }
@@ -247,6 +254,8 @@ export default function App() {
             isDemo={isDemo}
             isStale={!isDemo && letterIsStale}
             aiVersion={aiVersion}
+            draftVersion={draftVersion}
+            onDraftVersionChange={setDraftVersion}
             appliedSuggestions={appliedSuggestions}
             onAppliedSuggestionsChange={setAppliedSuggestions}
             onRevisionProgressChange={setRevisionInProgress}
