@@ -44,6 +44,7 @@ export default function StepCoverLetter({
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [draftVersion, setDraftVersion] = useState(1)
   const [confirmRegen, setConfirmRegen] = useState(false)
   const [suggestionsOpen, setSuggestionsOpen] = useState(true)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -65,6 +66,12 @@ export default function StepCoverLetter({
     onRevisionProgressChange(revisionState === 'preview')
     return () => onRevisionProgressChange(false)
   }, [revisionState, onRevisionProgressChange])
+
+  useEffect(() => {
+    if (aiVersion.trim()) {
+      setDraftVersion(1)
+    }
+  }, [aiVersion])
 
   function handleBack() {
     if (revisionState === 'preview') {
@@ -115,6 +122,7 @@ export default function StepCoverLetter({
     // Keep aiVersion as the original AI letter — the revised letter counts as an edit
     // so the existing Edited badge and Regenerate confirmation remain consistent
     onAppliedSuggestionsChange(new Set(appliedSuggestions).add(applyingIndex!))
+    setDraftVersion((v) => v + 1)
     setRevisionState('idle')
     setApplyingIndex(null)
     setPendingRevision('')
@@ -208,7 +216,7 @@ export default function StepCoverLetter({
       <div className="bg-white rounded-2xl border border-purple-100 shadow-sm mb-5 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-purple-50 bg-purple-50/50">
           <span className="text-xs font-medium text-purple-600 uppercase tracking-wide">
-            Cover Letter
+            Cover Letter · Draft {draftVersion}
           </span>
           {revisionState === 'preview' ? (
             <div className="flex gap-1">
@@ -282,7 +290,7 @@ export default function StepCoverLetter({
               className="flex items-center gap-1.5 bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
             >
               <Check className="w-3.5 h-3.5" />
-              Accept
+              Save Draft
             </button>
           </div>
         </div>
@@ -316,44 +324,43 @@ export default function StepCoverLetter({
                 const applyDisabled = revisionState !== 'idle' || loading || isApplied || isDemo
 
                 return (
-                  <li
-                    key={i}
-                    className={`flex items-start gap-2 text-sm pt-3 ${isApplied ? 'opacity-50' : 'text-purple-800'}`}
-                  >
-                    <span className="mt-0.5 shrink-0 text-purple-400 font-bold">{i + 1}.</span>
-                    <div className="flex-1 flex items-start justify-between gap-3 min-w-0">
-                      <span className="leading-relaxed">{s}</span>
-                      {!isDemo && (
-                        <button
-                          type="button"
-                          onClick={() => !applyDisabled && handleApplySuggestion(s, i)}
-                          disabled={applyDisabled}
-                          className={`shrink-0 flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
-                            isCurrentlyApplying
-                              ? 'bg-purple-50 border-purple-200 text-purple-500 cursor-wait'
-                              : isApplied
-                                ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-default'
-                                : applyDisabled
-                                  ? 'bg-gray-50 border-gray-100 text-gray-300 cursor-not-allowed'
-                                  : 'bg-white hover:bg-purple-50 border-purple-200 text-purple-600 hover:border-purple-300'
-                          }`}
-                        >
+                  <li key={i} className="pt-3">
+                    <button
+                      type="button"
+                      onClick={() => !applyDisabled && handleApplySuggestion(s, i)}
+                      disabled={applyDisabled}
+                      className={`w-full flex items-start gap-2 text-sm text-left rounded-xl border px-3 py-2.5 transition-colors ${
+                        isCurrentlyApplying
+                          ? 'bg-purple-50 border-purple-200 text-purple-600 cursor-wait'
+                          : isApplied
+                            ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-default'
+                            : applyDisabled
+                              ? 'bg-gray-50 border-gray-100 text-gray-300 cursor-not-allowed'
+                              : 'bg-white hover:bg-purple-50 border-purple-200 text-purple-800 hover:border-purple-300'
+                      }`}
+                    >
+                      <span className="mt-0.5 shrink-0 text-purple-400 font-bold">{i + 1}.</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="leading-relaxed block">{s}</span>
+                        <span className="mt-1.5 text-xs font-medium inline-flex items-center gap-1.5">
                           {isCurrentlyApplying ? (
                             <>
                               <Loader2 className="w-3 h-3 animate-spin" />
-                              Applying…
+                              Creating draft…
                             </>
                           ) : isApplied ? (
                             <>
                               <Check className="w-3 h-3" />
-                              Applied
+                              Draft created
                             </>
+                          ) : isDemo ? (
+                            'Available outside demo mode'
                           ) : (
-                            'Apply'
+                            'Click to create a new draft'
                           )}
-                        </button>
-                      )}
-                    </div>
+                        </span>
+                      </div>
+                    </button>
                   </li>
                 )
               })}
