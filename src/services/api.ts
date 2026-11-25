@@ -67,6 +67,30 @@ async function post(path: string, body: unknown): Promise<unknown> {
   return data
 }
 
+async function postFirstAvailable(paths: string[], body: unknown): Promise<unknown> {
+  let lastError: Error | null = null
+
+  for (const path of paths) {
+    try {
+      return await post(path, body)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      const isNotFound = /not found|\(404\)/i.test(message)
+
+      if (!isNotFound) {
+        throw error
+      }
+
+      lastError = error instanceof Error ? error : new Error(String(error))
+    }
+  }
+
+  throw (
+    lastError ??
+    new Error('The AI service could not be reached. Please try again.')
+  )
+}
+
 export async function analyzeExperience(
   resume: string,
   jobDescription: string,
@@ -121,7 +145,21 @@ export async function reviseCoverLetter({
   coverLetter: string
   suggestion: string
 }): Promise<ReviseResult> {
-  const data = await post('/revise', { coverLetter, suggestion })
+  let data: unknown
+  try {
+    data = await postFirstAvailable(['/revise', '/revise-cover-letter', '/edit-cover-letter'], {
+      coverLetter,
+      suggestion,
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    if (/not found|\(404\)/i.test(message)) {
+      throw new Error(
+        'Your AI Worker is missing the revision endpoint. Redeploy the latest Worker (worker/index.js) and try again.',
+      )
+    }
+    throw error
+  }
 
   if (!isRecord(data) || typeof data.revisedLetter !== 'string' || !data.revisedLetter.trim()) {
     throw new Error('The AI service returned an unexpected response. Please try again.')
